@@ -1,0 +1,48 @@
+.map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fountain-popup h3 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.fountain-popup p {
+  margin: 0 0 8px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.status-active {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.status-inactive {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .fountain-popup h3 {
+    font-size: 14px;
+  }
+
+  .fountain-popup p {
+    font-size: 12px;
+  }
+
+  /* Make map controls larger on mobile */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 20px !important;
+  }
+}

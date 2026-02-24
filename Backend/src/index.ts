@@ -12,23 +12,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rutas básicas
+// Basic routes
 app.get('/', (req: Request, res: Response) => {
   res.json({ 
-    message: 'API de The Sustainable Island - Fuentes de Agua',
+    message: 'The Sustainable Island API - Water Fountains',
     version: '1.0.0'
   });
 });
 
-// Rutas de fuentes de agua (por implementar)
+// Water fountains routes (to be implemented)
 app.get('/api/fountains', (req: Request, res: Response) => {
   res.json({ 
-    message: 'Endpoint para obtener todas las fuentes',
+    message: 'Endpoint to get all fountains',
     data: []
   });
 });
 
-// Iniciar servidor
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
