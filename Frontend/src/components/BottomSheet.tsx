@@ -157,12 +157,11 @@ const styles = StyleSheet.create({
   },
   sheet: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: 16,
+    right: 16,
+    bottom: 16,
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   handleWrap: {

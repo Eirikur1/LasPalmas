@@ -195,7 +195,7 @@ export default function Home() {
       </SafeAreaView>
 
       <BottomSheet
-        snapPoints={["12%", "90%"]}
+        snapPoints={[122, "90%"]}
         index={currentSnap}
         onSnapChange={handleSheetSnapChange}
         onBackdropPress={handleBackdropPress}
