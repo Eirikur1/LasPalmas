@@ -94,6 +94,11 @@ const styles = StyleSheet.create({
   mapWrap: {
     height: 140,
     width: "100%",
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: "hidden",
   },
   map: { width: "100%", height: "100%" },
   body: { padding: 16 },

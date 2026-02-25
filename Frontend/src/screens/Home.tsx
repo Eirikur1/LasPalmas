@@ -39,6 +39,7 @@ export default function Home() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [locationReady, setLocationReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [selectedFountain, setSelectedFountain] = useState<Fountain | null>(
@@ -57,7 +58,10 @@ export default function Home() {
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
+      if (status !== "granted") {
+        setLocationReady(true);
+        return;
+      }
       try {
         const loc = await Location.getCurrentPositionAsync({});
         setUserLocation({
@@ -66,6 +70,8 @@ export default function Home() {
         });
       } catch {
         // ignore
+      } finally {
+        setLocationReady(true);
       }
     })();
   }, []);
@@ -172,12 +178,24 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
+      {locationReady && (
       <Map
         fountains={fountains}
+        region={
+          userLocation
+            ? {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }
+            : undefined
+        }
         selectedFountain={selectedFountain}
         onMapPress={handleMapPress}
         onFountainPress={handleFountainClick}
       />
+      )}
 
       <SafeAreaView style={styles.overlay} edges={["top"]}>
         <View style={styles.searchColumn}>

@@ -12,6 +12,7 @@ import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import type { Fountain } from "../types/fountain";
 import { darkMapStyle } from "../constants/mapStyles";
+import { openDirections } from "../utils/directions";
 
 interface FountainDetailProps {
   fountain: Fountain;
@@ -31,15 +32,18 @@ const fountainRegion = (f: Fountain) => ({
 });
 
 export default function FountainDetail({ fountain }: FountainDetailProps) {
-  const images: string[] = fountain.images?.length
-    ? fountain.images
-    : fountain.imageUrl
-      ? [fountain.imageUrl]
-      : [];
+  // Use only local images from assets/images folder (no stock/remote URLs)
+  const localImages = PLACEHOLDER_IMAGES;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.card}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bounces={true}
+      alwaysBounceVertical={true}
+    >
+      <View style={styles.mapBlock}>
         <View style={styles.mapWrap}>
           <MapView
             style={styles.mapImage}
@@ -67,135 +71,138 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
             </Marker>
           </MapView>
         </View>
-
-        <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={2}>
-              {fountain.name}
-            </Text>
-            <View style={styles.titleRight}>
-              {fountain.category ? (
-                <Text style={styles.category}>{fountain.category}</Text>
-              ) : null}
-              {fountain.rating !== undefined && (
-                <View style={styles.rating}>
-                  <Text style={styles.ratingValue}>{fountain.rating}</Text>
-                  <Ionicons name="star" size={18} color="#FFD700" />
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.imageRow}>
-            {images.length >= 2
-              ? images.slice(0, 2).map((uri, i) => (
-                  <Image
-                    key={i}
-                    source={{ uri }}
-                    style={styles.galleryImage}
-                    resizeMode="cover"
-                  />
-                ))
-              : images.length === 1
-                ? (
-                  <>
-                    <Image
-                      source={{ uri: images[0] }}
-                      style={styles.galleryImage}
-                      resizeMode="cover"
-                    />
-                    <Image
-                      source={PLACEHOLDER_IMAGES[0]}
-                      style={styles.galleryImage}
-                      resizeMode="cover"
-                    />
-                  </>
-                )
-                : (
-                  <>
-                    <Image
-                      source={PLACEHOLDER_IMAGES[0]}
-                      style={styles.galleryImage}
-                      resizeMode="cover"
-                    />
-                    <Image
-                      source={PLACEHOLDER_IMAGES[1]}
-                      style={styles.galleryImage}
-                      resizeMode="cover"
-                    />
-                  </>
+        <View style={styles.strokeFrame}>
+          <View style={styles.content}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title} numberOfLines={2}>
+                {fountain.name}
+              </Text>
+              <View style={styles.titleRight}>
+                {fountain.category ? (
+                  <Text style={styles.category}>{fountain.category}</Text>
+                ) : null}
+                {fountain.rating !== undefined && (
+                  <View style={styles.rating}>
+                    <Text style={styles.ratingValue}>{fountain.rating}</Text>
+                    <Ionicons name="star" size={18} color="#FFD700" />
+                  </View>
                 )}
+              </View>
+            </View>
+
+            <View style={styles.imageRow}>
+              <Image
+                source={localImages[0]}
+                style={styles.galleryImage}
+                resizeMode="cover"
+              />
+              <Image
+                source={localImages[1]}
+                style={styles.galleryImage}
+                resizeMode="cover"
+              />
+            </View>
           </View>
 
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingQuestion}>
-              How would you rate the water?
-            </Text>
-            <Text style={styles.ratingSubtitle}>We'd love to know!</Text>
-            <View style={styles.emojis}>
-              {RATING_EMOJIS.map((emoji, i) => (
-                <Pressable key={i} style={styles.emojiButton}>
-                  <Text style={styles.emoji}>{emoji}</Text>
-                </Pressable>
-              ))}
+          <View style={styles.contentRest}>
+            <View style={styles.ratingSection}>
+              <Text style={styles.ratingQuestion}>
+                How would you rate the water?
+              </Text>
+              <Text style={styles.ratingSubtitle}>We'd love to know!</Text>
+              <View style={styles.emojis}>
+                {RATING_EMOJIS.map((emoji, i) => (
+                  <Pressable key={i} style={styles.emojiButton}>
+                    <Text style={styles.emoji}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
+          </View>
+
+          {fountain.distance ? (
+            <Text style={styles.distanceAboveButton}>{fountain.distance}</Text>
+          ) : null}
+          <View style={styles.extraSection}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.directionsButton,
+                pressed && styles.directionsButtonPressed,
+              ]}
+              onPress={() =>
+                openDirections(fountain.latitude, fountain.longitude, fountain.name)
+              }
+            >
+              <Ionicons name="navigate" size={20} color="#FFFFFF" />
+              <Text style={styles.directionsButtonText}>Get directions</Text>
+            </Pressable>
           </View>
         </View>
       </View>
-
-      {fountain.description ? (
-        <View style={styles.extraSection}>
-          <Text style={styles.extraTitle}>Description</Text>
-          <Text style={styles.extraText}>{fountain.description}</Text>
-        </View>
-      ) : null}
-
-      {fountain.distance ? (
-        <View style={styles.extraSection}>
-          <Text style={styles.extraTitle}>Distance</Text>
-          <Text style={styles.extraText}>{fountain.distance}</Text>
-        </View>
-      ) : null}
     </ScrollView>
   );
 }
 
-const CARD_TOP_RADIUS = 24;
+const MAP_RADIUS = 16;
+
+// Spacing from Figma (132-2403): consistent horizontal padding, generous vertical gaps
+const SPACE_H = 16;
+const SPACE_MAP_TO_TITLE = 20;
+const SPACE_TITLE_TO_IMAGES = 20;
+const SPACE_IMAGES_TO_RATING = 24;
+const SPACE_RATING_TO_ACTIONS = 24;
+const SPACE_BETWEEN_SECTIONS = 16;
+const GAP_IMAGES = 12;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: CARD_TOP_RADIUS,
-    borderTopRightRadius: CARD_TOP_RADIUS,
-    borderBottomLeftRadius: CARD_TOP_RADIUS,
-    borderBottomRightRadius: CARD_TOP_RADIUS,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
+  mapBlock: {
+    marginTop: 0,
+    marginHorizontal: 8,
+    marginBottom: SPACE_BETWEEN_SECTIONS,
+    padding: 13,
+    borderRadius: MAP_RADIUS,
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
     overflow: "hidden",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: "#FFFFFF",
   },
   mapWrap: {
-    height: 200,
+    height: 280,
+    marginHorizontal: 6,
+    marginBottom: 13,
     backgroundColor: "#e8e8e8",
-    position: "relative",
-    borderTopLeftRadius: CARD_TOP_RADIUS,
-    borderTopRightRadius: CARD_TOP_RADIUS,
+    borderTopLeftRadius: MAP_RADIUS,
+    borderTopRightRadius: MAP_RADIUS,
+    borderBottomLeftRadius: MAP_RADIUS,
+    borderBottomRightRadius: MAP_RADIUS,
     overflow: "hidden",
   },
-  mapImage: { width: "100%", height: "100%", borderRadius: 0 },
+  strokeFrame: {
+    paddingBottom: 16,
+  },
+  mapImage: { width: "100%", height: "100%" },
   mapPin: { width: 44, height: 44 },
-  content: { paddingHorizontal: 20, paddingVertical: 20 },
+  content: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: SPACE_TITLE_TO_IMAGES,
+  },
+  contentRest: {
+    paddingHorizontal: 0,
+    paddingTop: SPACE_IMAGES_TO_RATING,
+    paddingBottom: SPACE_RATING_TO_ACTIONS,
+  },
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 16,
-    marginBottom: 20,
+    marginBottom: SPACE_TITLE_TO_IMAGES,
   },
   title: {
     flex: 1,
@@ -214,8 +221,7 @@ const styles = StyleSheet.create({
   ratingValue: { fontSize: 16, fontWeight: "700", color: "#000000" },
   imageRow: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
+    gap: GAP_IMAGES,
   },
   galleryImage: {
     flex: 1,
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
   },
-  ratingSection: { marginBottom: 8 },
+  ratingSection: { marginBottom: 0 },
   ratingQuestion: {
     fontSize: 18,
     fontWeight: "700",
@@ -252,7 +258,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emoji: { fontSize: 28 },
-  extraSection: { paddingHorizontal: 20, paddingVertical: 12 },
+  distanceAboveButton: {
+    fontSize: 14,
+    color: "#666666",
+    marginBottom: 8,
+    paddingHorizontal: SPACE_H,
+  },
+  extraSection: {
+    paddingHorizontal: SPACE_H,
+    paddingVertical: SPACE_BETWEEN_SECTIONS,
+  },
   extraTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -260,4 +275,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   extraText: { fontSize: 14, color: "#444444", lineHeight: 22 },
+  directionsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#1a73e8",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  directionsButtonPressed: { opacity: 0.9 },
+  directionsButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
 });

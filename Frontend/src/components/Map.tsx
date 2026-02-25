@@ -32,6 +32,7 @@ export default function Map({
   onFountainPress,
 }: MapProps) {
   const mapRef = useRef<MapView>(null);
+  const hasAnimatedToUserRef = useRef(false);
   const safeFountains = Array.isArray(fountains) ? fountains : [];
 
   useEffect(() => {
@@ -47,6 +48,21 @@ export default function Map({
       );
     }
   }, [selectedFountain]);
+
+  useEffect(() => {
+    if (region && mapRef.current && !hasAnimatedToUserRef.current) {
+      hasAnimatedToUserRef.current = true;
+      mapRef.current.animateToRegion(
+        {
+          latitude: region.latitude,
+          longitude: region.longitude,
+          latitudeDelta: region.latitudeDelta ?? 0.02,
+          longitudeDelta: region.longitudeDelta ?? 0.02,
+        },
+        600,
+      );
+    }
+  }, [region]);
 
   const initialRegion = region
     ? {
