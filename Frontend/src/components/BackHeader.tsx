@@ -1,41 +1,68 @@
-import { useNavigate } from 'react-router-dom';
-import './BackHeader.css';
+import React from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
+import { Ionicons } from "@expo/vector-icons";
 
 interface BackHeaderProps {
   title: string;
-  backTo?: string;
+  backTo?: keyof RootStackParamList;
   showSearch?: boolean;
 }
 
-function BackHeader({ title, backTo, showSearch = false }: BackHeaderProps) {
-  const navigate = useNavigate();
+type NavProp = NativeStackNavigationProp<RootStackParamList>;
+
+export default function BackHeader({
+  title,
+  backTo,
+  showSearch = false,
+}: BackHeaderProps) {
+  const navigation = useNavigation<NavProp>();
 
   const handleBack = () => {
     if (backTo) {
-      navigate(backTo);
+      navigation.navigate(backTo);
     } else {
-      navigate(-1);
+      navigation.goBack();
     }
   };
 
   return (
-    <header className="back-header">
-      <button className="back-button" onClick={handleBack}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
-      </button>
-      <h1 className="back-header-title">{title}</h1>
-      {showSearch && (
-        <button className="search-button">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-        </button>
+    <View style={styles.header}>
+      <Pressable style={styles.backButton} onPress={handleBack} hitSlop={12}>
+        <Ionicons name="chevron-back" size={24} color="#333" />
+      </Pressable>
+      <Text style={styles.title}>{title}</Text>
+      {showSearch ? (
+        <Pressable style={styles.searchButton}>
+          <Ionicons name="search" size={24} color="#333" />
+        </Pressable>
+      ) : (
+        <View style={styles.placeholder} />
       )}
-    </header>
+    </View>
   );
 }
 
-export default BackHeader;
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    backgroundColor: "#fff",
+  },
+  backButton: { padding: 4 },
+  title: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    textAlign: "center",
+  },
+  searchButton: { padding: 4 },
+  placeholder: { width: 32 },
+});

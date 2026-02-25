@@ -1,89 +1,98 @@
-import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { Icon } from 'leaflet';
-import type { Fountain } from '../types/fountain';
-import 'leaflet/dist/leaflet.css';
-import './Map.css';
+import React, { useRef, useEffect } from "react";
+import { StyleSheet, View, Platform } from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import type { Fountain } from "../types/fountain";
+import { darkMapStyle } from "../constants/mapStyles";
 
-// Custom icon for water fountains
-const fountainIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const DEFAULT_REGION = {
+  latitude: 28.1235,
+  longitude: -15.4363,
+  latitudeDelta: 0.02,
+  longitudeDelta: 0.02,
+};
 
 interface MapProps {
   fountains: Fountain[];
-  center?: [number, number];
-  zoom?: number;
+  region?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta?: number;
+    longitudeDelta?: number;
+  };
   selectedFountain?: Fountain | null;
-  onMapClick?: () => void;
+  onMapPress?: () => void;
+  onFountainPress?: (fountain: Fountain) => void;
 }
 
-// Component to handle map movements
-function MapController({ selectedFountain }: { selectedFountain?: Fountain | null }) {
-  const map = useMap();
+export default function Map({
+  fountains = [],
+  region,
+  selectedFountain,
+  onMapPress,
+  onFountainPress,
+}: MapProps) {
+  const mapRef = useRef<MapView>(null);
+  const safeFountains = Array.isArray(fountains) ? fountains : [];
 
   useEffect(() => {
-    if (selectedFountain) {
-      map.flyTo([selectedFountain.latitude, selectedFountain.longitude], 16, {
-        duration: 1.5
-      });
+    if (selectedFountain && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: selectedFountain.latitude,
+          longitude: selectedFountain.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        500,
+      );
     }
-  }, [selectedFountain, map]);
+  }, [selectedFountain]);
 
-  return null;
-}
+  const initialRegion = region
+    ? {
+        ...DEFAULT_REGION,
+        latitude: region.latitude,
+        longitude: region.longitude,
+        latitudeDelta: region.latitudeDelta ?? 0.02,
+        longitudeDelta: region.longitudeDelta ?? 0.02,
+      }
+    : DEFAULT_REGION;
 
-// Component to handle map events
-function MapEventHandler({ onMapClick }: { onMapClick?: () => void }) {
-  useMapEvents({
-    click: () => {
-      onMapClick?.();
-    }
-  });
-
-  return null;
-}
-
-const Map = ({ fountains, center = [28.1235, -15.4363], zoom = 13, selectedFountain, onMapClick }: MapProps) => {
   return (
-    <div className="map-container">
-      <MapContainer 
-        center={center} 
-        zoom={zoom} 
-        scrollWheelZoom={true}
-        style={{ height: '100%', width: '100%' }}
+    <View style={styles.container}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={initialRegion}
+        onPress={onMapPress}
+        showsUserLocation
+        showsMyLocationButton
+        customMapStyle={Platform.OS === "android" ? darkMapStyle : undefined}
+        mapType={Platform.OS === "ios" ? "muted" : undefined}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapController selectedFountain={selectedFountain} />
-        <MapEventHandler onMapClick={onMapClick} />
-        {fountains.map((fountain) => (
-          <Marker 
-            key={fountain.id} 
-            position={[fountain.latitude, fountain.longitude]}
-            icon={fountainIcon}
-          >
-            <Popup>
-              <div className="fountain-popup">
-                <h3>{fountain.name}</h3>
-                {fountain.description && <p>{fountain.description}</p>}
-                <span className={fountain.isOperational ? 'status-active' : 'status-inactive'}>
-                  {fountain.isOperational ? '✓ Operational' : '✗ Not operational'}
-                </span>
-              </div>
-            </Popup>
-          </Marker>
+        {safeFountains.map((fountain) => (
+          <Marker
+            key={fountain.id}
+            coordinate={{
+              latitude: fountain.latitude,
+              longitude: fountain.longitude,
+            }}
+            title={fountain.name}
+            description={fountain.description}
+            image={
+              fountain.isOperational
+                ? require("../../assets/icons/PinIcon.png")
+                : require("../../assets/icons/AdminPin.png") // For now: inactive. Later: AdminPin = verified water stations.
+            }
+            onPress={() => onFountainPress?.(fountain)}
+          />
         ))}
-      </MapContainer>
-    </div>
+      </MapView>
+    </View>
   );
-};
+}
 
-export default Map;
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  map: { width: "100%", height: "100%" },
+});

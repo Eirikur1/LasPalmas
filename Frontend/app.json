@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Sustainable Island",
+    "slug": "sustainable-island",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sustainableisland.app"
+    },
+    "android": {
+      "package": "com.sustainableisland.app"
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-location",
+        { "locationWhenInUsePermission": "Show your location on the map." }
+      ]
+    ]
+  }
+}

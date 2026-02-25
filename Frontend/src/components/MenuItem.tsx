@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import './MenuItem.css';
+import React, { type ReactNode } from "react";
+import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 interface MenuItemProps {
   icon: ReactNode;
@@ -8,23 +9,51 @@ interface MenuItemProps {
   onClick: () => void;
 }
 
-function MenuItem({ icon, title, subtitle, onClick }: MenuItemProps) {
+export default function MenuItem({
+  icon,
+  title,
+  subtitle,
+  onClick,
+}: MenuItemProps) {
   return (
-    <button className="menu-item" onClick={onClick}>
-      <div className="menu-item-left">
-        <div className="menu-icon">
-          {icon}
-        </div>
-        <div className="menu-text">
-          <span className="menu-title">{title}</span>
-          {subtitle && <span className="menu-subtitle">{subtitle}</span>}
-        </div>
-      </div>
-      <svg className="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </button>
+    <Pressable
+      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+      onPress={onClick}
+    >
+      <View style={styles.left}>
+        <View style={styles.iconWrap}>{icon}</View>
+        <View style={styles.textWrap}>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#999" />
+    </Pressable>
   );
 }
 
-export default MenuItem;
+const styles = StyleSheet.create({
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  itemPressed: { backgroundColor: "#f9f9f9" },
+  left: { flexDirection: "row", alignItems: "center", flex: 1 },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  textWrap: { flex: 1 },
+  title: { fontSize: 16, fontWeight: "500", color: "#000" },
+  subtitle: { fontSize: 13, color: "#666", marginTop: 2 },
+});

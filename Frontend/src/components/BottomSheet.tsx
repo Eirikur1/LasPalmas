@@ -1,134 +1,201 @@
-import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
-import './BottomSheet.css';
+import React, { useEffect, useRef, type ReactNode } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Animated,
+  PanResponder,
+  Dimensions,
+  Easing,
+  Pressable,
+} from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface BottomSheetProps {
   children: ReactNode;
-  snapPoints?: number[]; // Porcentajes de altura: [minimizado, medio, completo]
-  defaultSnap?: number; // Índice del snap point inicial
-  onSnapChange?: (snapIndex: number) => void;
+  snapPoints?: (string | number)[];
+  index?: number;
+  onSnapChange?: (index: number) => void;
+  /** Called when the dimmed backdrop is tapped; use to close sheet and dismiss keyboard */
+  onBackdropPress?: () => void;
+  /** Shown in the drag handle area at the top so the sheet slides up/down from here */
+  title?: string;
+  subtitle?: string;
 }
 
-function BottomSheet({ 
-  children, 
-  snapPoints = [15, 50, 90], 
-  defaultSnap = 0,
-  onSnapChange 
+function parseSnapPoint(snap: string | number): number {
+  if (typeof snap === 'number') return snap;
+  const pct = parseFloat(snap);
+  if (snap.endsWith('%')) return (pct / 100) * SCREEN_HEIGHT;
+  return pct;
+}
+
+const ANIM_DURATION = 180;
+
+export default function BottomSheet({
+  children,
+  snapPoints = ['28%', '60%', '90%'],
+  index = 0,
+  onSnapChange,
+  onBackdropPress,
+  title,
+  subtitle,
 }: BottomSheetProps) {
-  const [currentSnap, setCurrentSnap] = useState(defaultSnap);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const [currentY, setCurrentY] = useState(0);
-  const sheetRef = useRef<HTMLDivElement>(null);
-
-  // Update snap when defaultSnap prop changes
-  useEffect(() => {
-    setCurrentSnap(defaultSnap);
-  }, [defaultSnap]);
-
-  const height = isDragging 
-    ? Math.max(10, Math.min(95, snapPoints[currentSnap] + ((startY - currentY) / window.innerHeight) * 100))
-    : snapPoints[currentSnap];
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    setStartY(e.touches[0].clientY);
-    setCurrentY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    setCurrentY(e.touches[0].clientY);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const dragDistance = startY - currentY;
-    const dragPercentage = (dragDistance / window.innerHeight) * 100;
-    const newHeight = snapPoints[currentSnap] + dragPercentage;
-
-    // Encuentra el snap point más cercano
-    let closestSnapIndex = 0;
-    let minDistance = Math.abs(newHeight - snapPoints[0]);
-
-    snapPoints.forEach((snap, index) => {
-      const distance = Math.abs(newHeight - snap);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestSnapIndex = index;
-      }
-    });
-
-    setCurrentSnap(closestSnapIndex);
-    onSnapChange?.(closestSnapIndex);
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setStartY(e.clientY);
-    setCurrentY(e.clientY);
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    setCurrentY(e.clientY);
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const dragDistance = startY - currentY;
-    const dragPercentage = (dragDistance / window.innerHeight) * 100;
-    const newHeight = snapPoints[currentSnap] + dragPercentage;
-
-    let closestSnapIndex = 0;
-    let minDistance = Math.abs(newHeight - snapPoints[0]);
-
-    snapPoints.forEach((snap, index) => {
-      const distance = Math.abs(newHeight - snap);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestSnapIndex = index;
-      }
-    });
-
-    setCurrentSnap(closestSnapIndex);
-    onSnapChange?.(closestSnapIndex);
-  }, [isDragging, startY, currentY, snapPoints, currentSnap, onSnapChange]);
+  const heights = snapPoints.map(parseSnapPoint);
+  const initialHeight = heights[Math.min(index, heights.length - 1)];
+  const animValue = useRef(new Animated.Value(initialHeight)).current;
+  const currentIndexRef = useRef(index);
+  const currentHeightRef = useRef(initialHeight);
+  const gestureStartHeightRef = useRef(initialHeight);
+  const onSnapChangeRef = useRef(onSnapChange);
+  onSnapChangeRef.current = onSnapChange;
 
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+    const i = Math.min(index, heights.length - 1);
+    if (i === currentIndexRef.current) return;
+    currentIndexRef.current = i;
+    const h = heights[i];
+    currentHeightRef.current = h;
+    Animated.timing(animValue, {
+      toValue: h,
+      duration: ANIM_DURATION,
+      useNativeDriver: false,
+      easing: Easing.out(Easing.cubic),
+    }).start((result) => {
+      if (result.finished) onSnapChangeRef.current?.(i);
+    });
+  }, [index, heights, animValue]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 4,
+      onPanResponderGrant: () => {
+        gestureStartHeightRef.current = currentHeightRef.current;
+      },
+      onPanResponderMove: (_, g) => {
+        const next = gestureStartHeightRef.current - g.dy;
+        const clamped = Math.max(heights[0], Math.min(heights[heights.length - 1], next));
+        currentHeightRef.current = clamped;
+        animValue.setValue(clamped);
+      },
+      onPanResponderRelease: () => {
+        const current = currentHeightRef.current;
+        const minH = heights[0];
+        const maxH = heights[heights.length - 1];
+        const closeThreshold = minH + (maxH - minH) * 0.2;
+
+        const targetIndex = current <= closeThreshold ? 0 : heights.length - 1;
+        const targetHeight = heights[targetIndex];
+        currentIndexRef.current = targetIndex;
+        currentHeightRef.current = targetHeight;
+        Animated.timing(animValue, {
+          toValue: targetHeight,
+          duration: ANIM_DURATION,
+          useNativeDriver: false,
+          easing: Easing.out(Easing.cubic),
+        }).start(() => onSnapChangeRef.current?.(targetIndex));
+      },
+    })
+  ).current;
 
   return (
-    <div 
-      ref={sheetRef}
-      className={`bottom-sheet ${isDragging ? 'dragging' : ''}`}
-      style={{ height: `${height}vh` }}
-    >
-      <div 
-        className="bottom-sheet-handle"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
+    <>
+      <Animated.View
+        style={[
+          styles.backdrop,
+          {
+            opacity: animValue.interpolate({
+              inputRange: [heights[0], heights[heights.length - 1]],
+              outputRange: [0, 0.5],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+        pointerEvents="none"
+      />
+      {index > 0 && onBackdropPress ? (
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onBackdropPress}
+          accessibilityLabel="Close"
+          accessibilityRole="button"
+        />
+      ) : null}
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            height: animValue,
+          },
+        ]}
+        {...panResponder.panHandlers}
       >
-        <div className="handle-bar"></div>
-      </div>
-      <div className="bottom-sheet-content">
-        {children}
-      </div>
-    </div>
+        <View style={styles.handleWrap}>
+          <View style={styles.handle} />
+          {title ? (
+            <>
+              <Text style={styles.handleTitle}>{title}</Text>
+              {subtitle ? (
+                <Text style={styles.handleSubtitle}>{subtitle}</Text>
+              ) : null}
+            </>
+          ) : null}
+        </View>
+        <View style={styles.content} pointerEvents="box-none">{children}</View>
+      </Animated.View>
+    </>
   );
 }
 
-export default BottomSheet;
+const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  handleWrap: {
+    paddingTop: 10,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ddd',
+    marginBottom: 8,
+    position: 'absolute',
+    top: 10,
+  },
+  handleTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  handleSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+    minHeight: 0,
+  },
+});

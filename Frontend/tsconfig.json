@@ -1,7 +1,12 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "extends": "expo/tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "esnext",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
 }

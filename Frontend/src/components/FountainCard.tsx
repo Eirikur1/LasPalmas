@@ -1,5 +1,7 @@
-import type { Fountain } from '../types/fountain';
-import './FountainCard.css';
+import React from "react";
+import { View, Text, Pressable, Image, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import type { Fountain } from "../types/fountain";
 
 interface FountainCardProps {
   fountain: Fountain;
@@ -7,51 +9,108 @@ interface FountainCardProps {
   showImage?: boolean;
 }
 
-function FountainCard({ fountain, onClick, showImage = true }: FountainCardProps) {
+export default function FountainCard({
+  fountain,
+  onClick,
+  showImage = true,
+}: FountainCardProps) {
   return (
-    <button className="fountain-card" onClick={onClick}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      onPress={onClick}
+    >
       {showImage && (
-        <div className="fountain-card-image">
+        <View style={styles.imageWrap}>
           {fountain.imageUrl ? (
-            <img src={fountain.imageUrl} alt={fountain.name} />
+            <Image
+              source={{ uri: fountain.imageUrl }}
+              style={styles.image}
+              resizeMode="cover"
+            />
           ) : (
-            <div className="fountain-placeholder">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-              </svg>
-            </div>
+            <View style={styles.placeholder}>
+              <Ionicons name="water" size={32} color="#2196F3" />
+            </View>
           )}
-        </div>
+        </View>
       )}
-      <div className="fountain-card-content">
-        <div className="fountain-card-header">
-          <h3 className="fountain-card-title">{fountain.name}</h3>
-          {fountain.category && (
-            <span className="fountain-category">{fountain.category}</span>
-          )}
-        </div>
-        <div className="fountain-card-details">
-          {fountain.distance && (
-            <span className="fountain-distance">{fountain.distance}</span>
-          )}
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title} numberOfLines={1}>
+            {fountain.name}
+          </Text>
+          {fountain.category ? (
+            <Text style={styles.category}>{fountain.category}</Text>
+          ) : null}
+        </View>
+        <View style={styles.details}>
+          {fountain.distance ? (
+            <Text style={styles.distance}>{fountain.distance}</Text>
+          ) : null}
           {fountain.isFree !== undefined && (
-            <span className="fountain-price">{fountain.isFree ? 'Free' : 'Paid'}</span>
+            <Text style={styles.price}>
+              {fountain.isFree ? "Free" : "Paid"}
+            </Text>
           )}
-        </div>
+        </View>
         {fountain.rating !== undefined && (
-          <div className="fountain-rating">
-            <span className="rating-value">{fountain.rating}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFD700" stroke="none">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-          </div>
+          <View style={styles.rating}>
+            <Text style={styles.ratingValue}>{fountain.rating}</Text>
+            <Ionicons name="star" size={16} color="#FFD700" />
+          </View>
         )}
-      </div>
-      <svg className="chevron-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
-    </button>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#999" />
+    </Pressable>
   );
 }
 
-export default FountainCard;
+const styles = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  cardPressed: { backgroundColor: "#f9f9f9" },
+  imageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    overflow: "hidden",
+    marginRight: 12,
+  },
+  image: { width: "100%", height: "100%" },
+  placeholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#E3F2FD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  title: { fontSize: 16, fontWeight: "600", color: "#000", flex: 1 },
+  category: {
+    fontSize: 12,
+    color: "#2196F3",
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  details: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  distance: { fontSize: 13, color: "#666" },
+  price: { fontSize: 13, color: "#666" },
+  rating: { flexDirection: "row", alignItems: "center", gap: 4 },
+  ratingValue: { fontSize: 14, fontWeight: "600", color: "#000" },
+});

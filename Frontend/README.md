@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# Sustainable Island – React Native (Expo)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mobile app for finding water refill stations. Built with **Expo** and **React Native**.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd Frontend
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Run
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **iOS simulator:** `npm run ios`
+- **Android emulator:** `npm run android`
+- **Expo Go (scan QR):** `npm start`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Maps
+
+The app uses **react-native-maps**: Apple Maps on iOS, Google Maps on Android. No API keys needed for basic use. The map works in **Expo Go**.
+
+## Assets (logos & images)
+
+Put files here and reference them in code:
+
+| Folder | Use for | How to use in code |
+|--------|---------|--------------------|
+| **`assets/images/`** | PNG, JPG, WebP (photos, illustrations) | `require('../assets/images/logo.png')` then `<Image source={logo} />` |
+| **`assets/icons/`** | SVG (logos, icons) | `import Logo from '../assets/icons/logo.svg'` then `<Logo width={120} height={40} />` |
+
+- **Images:** Use with React Native’s `<Image source={require('../assets/images/photo.jpg')} />`.
+- **SVGs:** Drop `.svg` files in `assets/icons/` and import as components (see above). Restart the dev server after adding new SVGs.
+
+## Structure
+
+- `App.tsx` – Root with navigation
+- `src/screens/` – Home, SignIn, SignUp
+- `src/components/` – Map, BottomSheet, FountainCard, FountainDetail, ProfileMenu, etc.
+- `src/navigation/types.ts` – Stack param list
+- `src/constants/mockFountains.ts` – Mock fountain data
+
+## Stack
+
+- Expo SDK 52
+- React Navigation (native stack)
+- react-native-maps (Apple Maps / Google Maps)
+- @gorhom/bottom-sheet
+- react-native-gesture-handler, react-native-reanimated
