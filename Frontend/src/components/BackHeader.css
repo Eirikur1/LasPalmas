@@ -1,0 +1,47 @@
+.back-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-bottom: 1px solid #eee;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  color: #333;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: #00aaff;
+}
+
+.back-header-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.search-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  color: #333;
+  transition: color 0.2s;
+}
+
+.search-button:hover {
+  color: #00aaff;
+}
