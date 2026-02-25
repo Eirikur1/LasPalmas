@@ -136,12 +136,16 @@ export default function BottomSheet({
         <View style={styles.handleWrap}>
           <View style={styles.handle} />
           {title ? (
-            <>
-              <Text style={styles.handleTitle}>{title}</Text>
+            <View style={styles.titleBlock}>
+              <Text style={styles.handleTitle} numberOfLines={1}>
+                {title}
+              </Text>
               {subtitle ? (
-                <Text style={styles.handleSubtitle}>{subtitle}</Text>
+                <Text style={styles.handleSubtitle} numberOfLines={1}>
+                  {subtitle}
+                </Text>
               ) : null}
-            </>
+            </View>
           ) : null}
         </View>
         <View style={styles.content} pointerEvents="box-none">{children}</View>
@@ -168,9 +172,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 14,
     paddingHorizontal: 16,
-    alignItems: 'center',
+    alignItems: 'stretch',
     minHeight: 48,
-    justifyContent: 'center',
   },
   handle: {
     width: 40,
@@ -178,18 +181,22 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#ddd',
     marginBottom: 8,
-    position: 'absolute',
-    top: 10,
+    alignSelf: 'center',
+  },
+  titleBlock: {
+    alignSelf: 'stretch',
   },
   handleTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '500',
     color: '#000',
+    textAlign: 'left',
   },
   handleSubtitle: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
-    marginTop: 2,
+    marginTop: 4,
+    textAlign: 'left',
   },
   content: {
     flex: 1,

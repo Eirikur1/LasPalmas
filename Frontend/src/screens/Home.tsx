@@ -17,6 +17,7 @@ import * as Location from "expo-location";
 import {
   Map,
   BottomSheet,
+  FeaturedFountainCard,
   FountainCard,
   FountainDetail,
   ProfileMenu,
@@ -39,6 +40,7 @@ export default function Home() {
     longitude: number;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [selectedFountain, setSelectedFountain] = useState<Fountain | null>(
     null,
   );
@@ -87,6 +89,16 @@ export default function Home() {
     });
     return list;
   }, [fountains, userLocation]);
+
+  const searchDropdownFountains = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = q
+      ? closestFountains.filter((f) =>
+          f.name.toLowerCase().includes(q),
+        )
+      : closestFountains;
+    return list.slice(0, 5);
+  }, [closestFountains, searchQuery]);
 
   const handleFountainClick = useCallback((fountain: Fountain) => {
     markerPressTimeRef.current = Date.now();
@@ -148,6 +160,16 @@ export default function Home() {
     setCurrentSnap(1);
   }, []);
 
+  const handleSearchSelectFountain = useCallback(
+    (fountain: Fountain) => {
+      setSearchFocused(false);
+      Keyboard.dismiss();
+      setSearchQuery("");
+      handleFountainClick(fountain);
+    },
+    [handleFountainClick],
+  );
+
   return (
     <View style={styles.container}>
       <Map
@@ -158,19 +180,54 @@ export default function Home() {
       />
 
       <SafeAreaView style={styles.overlay} edges={["top"]}>
-        <View style={styles.searchWrap}>
-          <Image
-            source={require("../../assets/icons/SearchIcon.png")}
-            style={styles.searchIcon}
-            resizeMode="contain"
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Find a Refill Station"
-            placeholderTextColor="#333333"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+        <View style={styles.searchColumn}>
+          <View style={styles.searchWrap}>
+            <Image
+              source={require("../../assets/icons/SearchIcon.png")}
+              style={styles.searchIcon}
+              resizeMode="contain"
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Find a Refill Station"
+              placeholderTextColor="#333333"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() =>
+                setTimeout(() => setSearchFocused(false), 200)
+              }
+            />
+          </View>
+          {searchFocused && searchDropdownFountains.length > 0 && (
+            <View style={styles.searchDropdown}>
+              <ScrollView
+                style={styles.searchDropdownScroll}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {searchDropdownFountains.map((fountain) => (
+                  <Pressable
+                    key={fountain.id}
+                    style={({ pressed }) => [
+                      styles.searchDropdownRow,
+                      pressed && styles.searchDropdownRowPressed,
+                    ]}
+                    onPress={() => handleSearchSelectFountain(fountain)}
+                  >
+                    <Text style={styles.searchDropdownName} numberOfLines={1}>
+                      {fountain.name}
+                    </Text>
+                    {fountain.distance ? (
+                      <Text style={styles.searchDropdownDistance}>
+                        {fountain.distance}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
         <View style={styles.rightButtons}>
           <Pressable style={styles.userButton} onPress={handleUserPress}>
@@ -201,9 +258,7 @@ export default function Home() {
         onBackdropPress={handleBackdropPress}
         title={sheetContent === "list" ? "Closest Fountains" : undefined}
         subtitle={
-          sheetContent === "list"
-            ? "Drag to expand · Sorted by distance"
-            : undefined
+          sheetContent === "list" ? "Find the closest water fountains" : undefined
         }
       >
         {sheetContent === "list" && (
@@ -214,7 +269,13 @@ export default function Home() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              {closestFountains.map((fountain) => (
+              {closestFountains.length > 0 && (
+                <FeaturedFountainCard
+                  fountain={closestFountains[0]}
+                  onClick={() => handleFountainClick(closestFountains[0])}
+                />
+              )}
+              {closestFountains.slice(1).map((fountain) => (
                 <FountainCard
                   key={fountain.id}
                   fountain={fountain}
@@ -256,8 +317,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 8,
   },
+  searchColumn: { flex: 1 },
   searchWrap: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -266,6 +327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 40,
     minHeight: 40,
+    alignSelf: "stretch",
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -278,6 +340,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333333",
     paddingVertical: 0,
+  },
+  searchDropdown: {
+    position: "absolute",
+    top: 48,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginTop: 4,
+    maxHeight: 220,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    overflow: "hidden",
+  },
+  searchDropdownScroll: { maxHeight: 220 },
+  searchDropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  searchDropdownRowPressed: { backgroundColor: "#f5f5f5" },
+  searchDropdownName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    marginRight: 8,
+  },
+  searchDropdownDistance: {
+    fontSize: 14,
+    color: "#666666",
   },
   rightButtons: {
     flexDirection: "column",

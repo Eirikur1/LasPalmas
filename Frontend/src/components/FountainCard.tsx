@@ -1,65 +1,85 @@
 import React from "react";
-import { View, Text, Pressable, Image, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Platform,
+  Image,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import type { Fountain } from "../types/fountain";
+import { darkMapStyle } from "../constants/mapStyles";
+
+const thumbRegion = (f: Fountain) => ({
+  latitude: f.latitude,
+  longitude: f.longitude,
+  latitudeDelta: 0.01,
+  longitudeDelta: 0.01,
+});
 
 interface FountainCardProps {
   fountain: Fountain;
   onClick?: () => void;
-  showImage?: boolean;
 }
 
-export default function FountainCard({
-  fountain,
-  onClick,
-  showImage = true,
-}: FountainCardProps) {
+export default function FountainCard({ fountain, onClick }: FountainCardProps) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onClick}
     >
-      {showImage && (
-        <View style={styles.imageWrap}>
-          {fountain.imageUrl ? (
+      <View style={styles.thumbWrap}>
+        <MapView
+          style={styles.thumbMap}
+          initialRegion={thumbRegion(fountain)}
+          scrollEnabled={false}
+          zoomEnabled={false}
+          pitchEnabled={false}
+          rotateEnabled={false}
+          customMapStyle={Platform.OS === "android" ? darkMapStyle : undefined}
+          mapType={
+            (Platform.OS === "ios" ? "muted" : undefined) as
+              | "standard"
+              | "satellite"
+              | "hybrid"
+              | undefined
+          }
+        >
+          <Marker
+            coordinate={{
+              latitude: fountain.latitude,
+              longitude: fountain.longitude,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
+          >
             <Image
-              source={{ uri: fountain.imageUrl }}
-              style={styles.image}
-              resizeMode="cover"
+              source={require("../../assets/icons/PinIcon.png")}
+              style={styles.thumbPin}
+              resizeMode="contain"
             />
-          ) : (
-            <View style={styles.placeholder}>
-              <Ionicons name="water" size={32} color="#2196F3" />
-            </View>
-          )}
-        </View>
-      )}
+          </Marker>
+        </MapView>
+      </View>
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title} numberOfLines={1}>
-            {fountain.name}
-          </Text>
-          {fountain.category ? (
-            <Text style={styles.category}>{fountain.category}</Text>
-          ) : null}
-        </View>
-        <View style={styles.details}>
-          {fountain.distance ? (
-            <Text style={styles.distance}>{fountain.distance}</Text>
-          ) : null}
-          {fountain.isFree !== undefined && (
-            <Text style={styles.price}>
-              {fountain.isFree ? "Free" : "Paid"}
-            </Text>
-          )}
-        </View>
-        {fountain.rating !== undefined && (
-          <View style={styles.rating}>
-            <Text style={styles.ratingValue}>{fountain.rating}</Text>
-            <Ionicons name="star" size={16} color="#FFD700" />
-          </View>
+        <Text style={styles.title} numberOfLines={1}>
+          {fountain.name}
+        </Text>
+        {fountain.distance ? (
+          <Text style={styles.distance}>{fountain.distance}</Text>
+        ) : null}
+        {fountain.isFree !== undefined && (
+          <Text style={styles.free}>{fountain.isFree ? "Free" : "Paid"}</Text>
         )}
       </View>
+      {fountain.rating !== undefined && (
+        <View style={styles.rating}>
+          <Text style={styles.ratingValue}>{fountain.rating}</Text>
+          <Ionicons name="star" size={16} color="#FFD700" />
+        </View>
+      )}
       <Ionicons name="chevron-forward" size={20} color="#999" />
     </Pressable>
   );
@@ -77,40 +97,24 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
   },
   cardPressed: { backgroundColor: "#f9f9f9" },
-  imageWrap: {
+  thumbWrap: {
     width: 56,
     height: 56,
     borderRadius: 10,
     overflow: "hidden",
     marginRight: 12,
   },
-  image: { width: "100%", height: "100%" },
-  placeholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#E3F2FD",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  thumbMap: { width: "100%", height: "100%" },
+  thumbPin: { width: 18, height: 18 },
   content: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 2,
   },
-  title: { fontSize: 16, fontWeight: "600", color: "#000", flex: 1 },
-  category: {
-    fontSize: 12,
-    color: "#2196F3",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  details: { flexDirection: "row", gap: 8, marginBottom: 4 },
-  distance: { fontSize: 13, color: "#666" },
-  price: { fontSize: 13, color: "#666" },
+  distance: { fontSize: 13, color: "#666", marginBottom: 2 },
+  free: { fontSize: 13, color: "#333" },
   rating: { flexDirection: "row", alignItems: "center", gap: 4 },
   ratingValue: { fontSize: 14, fontWeight: "600", color: "#000" },
 });

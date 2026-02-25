@@ -56,9 +56,15 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
                 latitude: fountain.latitude,
                 longitude: fountain.longitude,
               }}
-              image={require("../../assets/icons/PinIcon.png")}
               anchor={{ x: 0.5, y: 1 }}
-            />
+              tracksViewChanges={false}
+            >
+              <Image
+                source={require("../../assets/icons/PinIcon.png")}
+                style={styles.mapPin}
+                resizeMode="contain"
+              />
+            </Marker>
           </MapView>
         </View>
 
@@ -182,6 +188,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   mapImage: { width: "100%", height: "100%", borderRadius: 0 },
+  mapPin: { width: 44, height: 44 },
   content: { paddingHorizontal: 20, paddingVertical: 20 },
   titleRow: {
     flexDirection: "row",
