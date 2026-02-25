@@ -4,7 +4,6 @@ export { default as BottomSheet } from './BottomSheet';
 export { default as FormInput } from './FormInput';
 export { default as FountainCard } from './FountainCard';
 export { default as FountainDetail } from './FountainDetail';
-export { default as FountainDetailPreview } from './FountainDetailPreview';
 export { default as Map } from './Map';
 export { default as MenuItem } from './MenuItem';
 export { default as ProfileMenu } from './ProfileMenu';

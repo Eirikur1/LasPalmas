@@ -56,4 +56,15 @@ export const mockFountains: Fountain[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1516410529446-2c777ec549ce?w=400",
   },
+  {
+    id: 5,
+    name: "Gullfoss",
+    latitude: 64.32713999644166,
+    longitude: -20.119973219271998,
+    description: "Iconic waterfall and water source at Gullfoss",
+    isOperational: true,
+    rating: 4.9,
+    isFree: true,
+    category: "Popular",
+  },
 ];

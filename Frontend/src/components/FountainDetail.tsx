@@ -6,19 +6,31 @@ import {
   Image,
   Pressable,
   StyleSheet,
+  Platform,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import type { Fountain } from "../types/fountain";
+import { darkMapStyle } from "../constants/mapStyles";
 
 interface FountainDetailProps {
   fountain: Fountain;
 }
 
 const RATING_EMOJIS = ["😖", "😕", "😐", "🙂", "😍"];
-const STANDBY_GRAY = "#BDBDBD";
+const PLACEHOLDER_IMAGES = [
+  require("../../assets/images/b741f146d496c7d4f5d41f27685cd7b5.jpg"),
+  require("../../assets/images/b949af6e1c695e801c5a0013a98256df.jpg"),
+];
+
+const fountainRegion = (f: Fountain) => ({
+  latitude: f.latitude,
+  longitude: f.longitude,
+  latitudeDelta: 0.005,
+  longitudeDelta: 0.005,
+});
 
 export default function FountainDetail({ fountain }: FountainDetailProps) {
-  const hasMapImage = Boolean(fountain.imageUrl);
   const images: string[] = fountain.images?.length
     ? fountain.images
     : fountain.imageUrl
@@ -28,17 +40,26 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.card}>
-        <View style={[styles.mapWrap, !hasMapImage && styles.mapWrapStandby]}>
-          {hasMapImage && (
-            <Image
-              source={{ uri: fountain.imageUrl! }}
-              style={styles.mapImage}
-              resizeMode="cover"
+        <View style={styles.mapWrap}>
+          <MapView
+            style={styles.mapImage}
+            initialRegion={fountainRegion(fountain)}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            pitchEnabled={false}
+            rotateEnabled={false}
+            customMapStyle={Platform.OS === "android" ? darkMapStyle : undefined}
+            mapType={(Platform.OS === "ios" ? "muted" : undefined) as "standard" | "satellite" | "hybrid" | undefined}
+          >
+            <Marker
+              coordinate={{
+                latitude: fountain.latitude,
+                longitude: fountain.longitude,
+              }}
+              image={require("../../assets/icons/PinIcon.png")}
+              anchor={{ x: 0.5, y: 1 }}
             />
-          )}
-          <View style={styles.marker}>
-            <Ionicons name="location" size={40} color="#FF5722" />
-          </View>
+          </MapView>
         </View>
 
         <View style={styles.content}>
@@ -77,13 +98,25 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
                       style={styles.galleryImage}
                       resizeMode="cover"
                     />
-                    <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
+                    <Image
+                      source={PLACEHOLDER_IMAGES[0]}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
                   </>
                 )
                 : (
                   <>
-                    <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
-                    <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
+                    <Image
+                      source={PLACEHOLDER_IMAGES[0]}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
+                    <Image
+                      source={PLACEHOLDER_IMAGES[1]}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
                   </>
                 )}
           </View>
@@ -148,9 +181,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: CARD_TOP_RADIUS,
     overflow: "hidden",
   },
-  mapWrapStandby: { backgroundColor: STANDBY_GRAY },
-  mapImage: { width: "100%", height: "100%" },
-  marker: { position: "absolute", bottom: 16, alignSelf: "center" },
+  mapImage: { width: "100%", height: "100%", borderRadius: 0 },
   content: { paddingHorizontal: 20, paddingVertical: 20 },
   titleRow: {
     flexDirection: "row",
@@ -185,7 +216,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
   },
-  galleryPlaceholder: { backgroundColor: STANDBY_GRAY },
   ratingSection: { marginBottom: 8 },
   ratingQuestion: {
     fontSize: 18,

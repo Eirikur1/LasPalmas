@@ -19,7 +19,6 @@ import {
   BottomSheet,
   FountainCard,
   FountainDetail,
-  FountainDetailPreview,
   ProfileMenu,
   AddWaterSource,
 } from "../components";
@@ -91,7 +90,8 @@ export default function Home() {
 
   const handleFountainClick = useCallback((fountain: Fountain) => {
     markerPressTimeRef.current = Date.now();
-    pendingContentRef.current = { type: "detail", fountain };
+    setSelectedFountain(fountain);
+    setSheetContent("detail");
     setCurrentSnap(1);
   }, []);
 
