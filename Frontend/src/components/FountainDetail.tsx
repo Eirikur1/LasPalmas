@@ -57,20 +57,23 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
 
   const totalSlides = urls.length + (canAddPhotos ? 1 : 0);
 
-  // The final snap shows the last slide's RIGHT edge aligned with the carousel's
-  // right edge (i.e. fully visible without it becoming the leftmost item).
-  // finalSnap = lastSlide.left + ITEM_W - CAROUSEL_W
-  //           = (totalSlides-1)*(ITEM_W+IMG_GAP) + ITEM_W - CAROUSEL_W
+  // The add-photo slide has marginRight = ITEM_W/2, so content ends
+  // ITEM_W/2 past its right edge. The final snap positions the last real
+  // photo ~IMG_GAP from the viewport left, with add-photo fully visible and
+  // a half-slot trailing gap — noticeably further than right-edge-only,
+  // but well short of snapping add-photo to the far left.
+  // finalSnap = (totalSlides-1)*(ITEM_W+IMG_GAP) + 1.5*ITEM_W - CAROUSEL_W
   const snapOffsets = useMemo(() => {
     if (totalSlides <= 1) return [0];
-    const finalSnap =
-      (totalSlides - 1) * (ITEM_W + IMG_GAP) + ITEM_W - CAROUSEL_W;
-    if (finalSnap <= 0) return [0]; // everything fits without scrolling
+    const finalSnap = Math.round(
+      (totalSlides - 1) * (ITEM_W + IMG_GAP) + 1.5 * ITEM_W - CAROUSEL_W
+    );
+    if (finalSnap <= 0) return [0]; // everything fits, no scroll needed
     const offsets: number[] = [0];
     for (let i = 1; i * (ITEM_W + IMG_GAP) < finalSnap; i++) {
       offsets.push(Math.round(i * (ITEM_W + IMG_GAP)));
     }
-    offsets.push(Math.round(finalSnap));
+    offsets.push(finalSnap);
     return offsets;
   }, [totalSlides]);
 
@@ -218,9 +221,8 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
                 ))}
                 {canAddPhotos && (
                   <Pressable
-                    // No trailing margin — content ends at the add-photo's right edge,
-                    // so max scroll == finalSnap and the user cannot scroll past it.
-                    style={[styles.carouselImage, styles.addPhotoSlide, { width: ITEM_W }]}
+                    // marginRight = ITEM_W/2 extends content so max scroll == finalSnap.
+                    style={[styles.carouselImage, styles.addPhotoSlide, { width: ITEM_W, marginRight: Math.round(ITEM_W / 2) }]}
                     onPress={handleAddPhoto}
                     disabled={addingPhoto}
                     accessibilityLabel="Add photo"
