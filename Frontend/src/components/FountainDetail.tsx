@@ -56,11 +56,23 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
   const canAddPhotos = typeof fountain.id === "string" && !!onPhotosAdded;
 
   const totalSlides = urls.length + (canAddPhotos ? 1 : 0);
-  // Explicit snap offsets so the ScrollView can only land on real slide positions
-  const snapOffsets = useMemo(
-    () => Array.from({ length: totalSlides }, (_, i) => i * (ITEM_W + IMG_GAP)),
-    [totalSlides]
-  );
+
+  // The final snap shows the last slide's RIGHT edge aligned with the carousel's
+  // right edge (i.e. fully visible without it becoming the leftmost item).
+  // finalSnap = lastSlide.left + ITEM_W - CAROUSEL_W
+  //           = (totalSlides-1)*(ITEM_W+IMG_GAP) + ITEM_W - CAROUSEL_W
+  const snapOffsets = useMemo(() => {
+    if (totalSlides <= 1) return [0];
+    const finalSnap =
+      (totalSlides - 1) * (ITEM_W + IMG_GAP) + ITEM_W - CAROUSEL_W;
+    if (finalSnap <= 0) return [0]; // everything fits without scrolling
+    const offsets: number[] = [0];
+    for (let i = 1; i * (ITEM_W + IMG_GAP) < finalSnap; i++) {
+      offsets.push(Math.round(i * (ITEM_W + IMG_GAP)));
+    }
+    offsets.push(Math.round(finalSnap));
+    return offsets;
+  }, [totalSlides]);
 
   const prevFountainId = useRef(fountain.id);
   if (prevFountainId.current !== fountain.id) {
@@ -195,13 +207,20 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
                   <Image
                     key={`${uri}-${i}`}
                     source={{ uri }}
-                    style={[styles.carouselImage, { width: ITEM_W, marginRight: IMG_GAP }]}
+                    // Last image before add-photo still needs a gap; last image
+                    // overall (no add-photo) has no trailing margin so content ends flush.
+                    style={[styles.carouselImage, {
+                      width: ITEM_W,
+                      marginRight: (i < urls.length - 1 || canAddPhotos) ? IMG_GAP : 0,
+                    }]}
                     resizeMode="cover"
                   />
                 ))}
                 {canAddPhotos && (
                   <Pressable
-                    style={[styles.carouselImage, styles.addPhotoSlide, { width: ITEM_W, marginRight: CAROUSEL_W - ITEM_W }]}
+                    // No trailing margin — content ends at the add-photo's right edge,
+                    // so max scroll == finalSnap and the user cannot scroll past it.
+                    style={[styles.carouselImage, styles.addPhotoSlide, { width: ITEM_W }]}
                     onPress={handleAddPhoto}
                     disabled={addingPhoto}
                     accessibilityLabel="Add photo"
