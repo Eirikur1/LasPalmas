@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,26 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import type { Fountain } from "../types/fountain";
 import { darkMapStyle } from "../constants/mapStyles";
 import { openDirections } from "../utils/directions";
+import { uploadFountainPhotos } from "../lib/uploadFountainPhoto";
+import { addPhotosToWaterSource } from "../lib/waterSources";
+
+const SCREEN_W = Dimensions.get("window").width;
+// Account for mapBlock margins (8), padding (13), and belowMap margins (6)
+const CAROUSEL_W = SCREEN_W - 8 * 2 - 13 * 2 - 6 * 2;
 
 interface FountainDetailProps {
   fountain: Fountain;
+  onPhotosAdded?: (updated: Fountain) => void;
 }
 
 const RATING_EMOJIS = ["😖", "😕", "😐", "🙂", "😍"];
@@ -27,26 +38,48 @@ const fountainRegion = (f: Fountain) => ({
   longitudeDelta: 0.005,
 });
 
-export default function FountainDetail({ fountain }: FountainDetailProps) {
-  // Prefer API/OSM images when present; otherwise use local placeholders
+export default function FountainDetail({ fountain, onPhotosAdded }: FountainDetailProps) {
   const urls: string[] =
     (fountain.images?.length ?? 0) > 0
       ? fountain.images!
       : fountain.imageUrl
         ? [fountain.imageUrl]
         : [];
-  const img1 = urls[0];
-  const img2 = urls[1];
-  // Reset error state when fountain changes so a failed image on one location
-  // doesn't permanently hide images on all subsequent locations.
-  const [img1Error, setImg1Error] = useState(false);
-  const [img2Error, setImg2Error] = useState(false);
-  const prevFountainId = React.useRef(fountain.id);
+
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const prevFountainId = useRef(fountain.id);
   if (prevFountainId.current !== fountain.id) {
     prevFountainId.current = fountain.id;
-    if (img1Error) setImg1Error(false);
-    if (img2Error) setImg2Error(false);
+    setCarouselIndex(0);
   }
+
+  // Only user-uploaded fountains (UUID string IDs) support adding photos.
+  const canAddPhotos = typeof fountain.id === "string" && !!onPhotosAdded;
+
+  const handleAddPhoto = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow access to your photos to add images.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    setAddingPhoto(true);
+    try {
+      const newUrls = await uploadFountainPhotos(result.assets.map((a) => a.uri));
+      const updated = await addPhotosToWaterSource(String(fountain.id), newUrls);
+      if (updated) onPhotosAdded?.(updated);
+    } catch (e) {
+      Alert.alert("Upload failed", e instanceof Error ? e.message : "Could not add photos.");
+    } finally {
+      setAddingPhoto(false);
+    }
+  }, [fountain.id, onPhotosAdded]);
 
   return (
     <ScrollView
@@ -101,26 +134,60 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
               )}
             </View>
           </View>
-          <View style={styles.imageRow}>
-            {img1 && !img1Error ? (
-              <Image
-                source={{ uri: img1 }}
-                style={styles.galleryImage}
-                resizeMode="cover"
-                onError={() => setImg1Error(true)}
-              />
-            ) : (
-              <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
-            )}
-            {img2 && !img2Error ? (
-              <Image
-                source={{ uri: img2 }}
-                style={styles.galleryImage}
-                resizeMode="cover"
-                onError={() => setImg2Error(true)}
-              />
-            ) : (
-              <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
+          {/* Image carousel + add button */}
+          <View style={styles.imageBlock}>
+            {urls.length > 0 ? (
+              <View>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  style={{ width: CAROUSEL_W }}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(
+                      e.nativeEvent.contentOffset.x / CAROUSEL_W
+                    );
+                    setCarouselIndex(idx);
+                  }}
+                >
+                  {urls.map((uri, i) => (
+                    <Image
+                      key={`${uri}-${i}`}
+                      source={{ uri }}
+                      style={[styles.carouselImage, { width: CAROUSEL_W }]}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </ScrollView>
+                {urls.length > 1 && (
+                  <View style={styles.dotsRow}>
+                    {urls.map((_, i) => (
+                      <View
+                        key={i}
+                        style={[styles.dot, i === carouselIndex && styles.dotActive]}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : null}
+            {canAddPhotos && (
+              <Pressable
+                style={[styles.addPhotoBtn, urls.length === 0 && styles.addPhotoBtnEmpty]}
+                onPress={handleAddPhoto}
+                disabled={addingPhoto}
+              >
+                {addingPhoto ? (
+                  <ActivityIndicator color="#2563EB" />
+                ) : (
+                  <>
+                    <Ionicons name="add" size={22} color="#2563EB" />
+                    <Text style={styles.addPhotoText}>
+                      {urls.length === 0 ? "Add photo" : "Add photo"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
             )}
           </View>
           {(fountain.description ?? "").trim() ? (
@@ -261,14 +328,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: GAP_IMAGES,
   },
-  galleryImage: {
-    flex: 1,
-    height: 120,
+  imageBlock: {
+    marginBottom: 8,
+    gap: 8,
+  },
+  carouselImage: {
+    height: 180,
     borderRadius: 12,
     overflow: "hidden",
   },
-  galleryPlaceholder: {
-    backgroundColor: "#E5E7EB",
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#D1D5DB",
+  },
+  dotActive: {
+    backgroundColor: "#2563EB",
+  },
+  addPhotoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: "#2563EB",
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  addPhotoBtnEmpty: {
+    paddingVertical: 18,
+  },
+  addPhotoText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   ratingSection: { marginBottom: 0 },
   ratingQuestion: {

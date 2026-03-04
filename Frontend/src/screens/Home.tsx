@@ -407,7 +407,15 @@ export default function Home() {
           </View>
         )}
         {sheetContent === "detail" && selectedFountain && (
-          <FountainDetail fountain={selectedFountain} />
+          <FountainDetail
+            fountain={selectedFountain}
+            onPhotosAdded={(updated) => {
+              setSelectedFountain(updated);
+              setUserFountains((prev) =>
+                prev.map((f) => (f.id === updated.id ? updated : f))
+              );
+            }}
+          />
         )}
         {sheetContent === "profile" && (
           <ProfileMenu

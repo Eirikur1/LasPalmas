@@ -1,6 +1,6 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
-import { getWaterSources, insertWaterSource, type InsertWaterSourceBody } from "./supabase";
+import { getWaterSources, insertWaterSource, addImagesToWaterSource, type InsertWaterSourceBody } from "./supabase";
 
 const app: Application = express();
 
@@ -54,6 +54,30 @@ app.post("/api/water-sources", async (req: Request, res: Response) => {
       e && typeof e === "object" && "message" in e
         ? String((e as { message: unknown }).message)
         : "Failed to create water source";
+    res.status(500).json({ error: message });
+  }
+});
+
+app.patch("/api/water-sources/:id/images", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { images } = req.body as { images?: string[] };
+    if (!Array.isArray(images) || images.length === 0) {
+      res.status(400).json({ error: "images array required" });
+      return;
+    }
+    const row = await addImagesToWaterSource(id, images);
+    if (!row) {
+      res.status(500).json({ error: "Failed to update images" });
+      return;
+    }
+    res.json(row);
+  } catch (e: unknown) {
+    console.error("PATCH /api/water-sources/:id/images", e);
+    const message =
+      e && typeof e === "object" && "message" in e
+        ? String((e as { message: unknown }).message)
+        : "Failed to update images";
     res.status(500).json({ error: message });
   }
 });
