@@ -174,7 +174,7 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
                 showsHorizontalScrollIndicator={false}
                   snapToInterval={ITEM_W + IMG_GAP}
                   decelerationRate="fast"
-                  contentContainerStyle={{ gap: IMG_GAP, paddingRight: CAROUSEL_W - ITEM_W }}
+                  contentContainerStyle={{ gap: IMG_GAP, paddingRight: CAROUSEL_W - ITEM_W - IMG_GAP }}
                   style={{ width: CAROUSEL_W }}
                 onMomentumScrollEnd={(e) => {
                   const idx = Math.round(
