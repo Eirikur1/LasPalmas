@@ -83,14 +83,35 @@ export async function addPhotosToWaterSource(
 ): Promise<Fountain | null> {
   const base = getBaseUrl();
   if (!base) throw new Error("Backend URL not set.");
-  const res = await fetch(`${base}/api/water-sources/${id}/images`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ images }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "Failed to update images");
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${base}/api/water-sources/${id}/images`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as { error?: string }).error ?? "Failed to update images");
+    }
+    return (await res.json()) as Fountain;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const isAbort = e instanceof Error && e.name === "AbortError";
+    const isNetwork =
+      e instanceof TypeError ||
+      (e instanceof Error &&
+        (/network request timed out|timeout|failed to fetch|network error/i.test(e.message) || isAbort));
+    if (isNetwork || isAbort) {
+      const hint =
+        base.includes("localhost") || base.includes("127.0.0.1")
+          ? " On a physical device, set EXPO_PUBLIC_API_URL in Frontend/.env to your computer's IP (e.g. http://192.168.1.x:3000) and ensure the backend is running."
+          : " Check that the backend is running and reachable.";
+      throw new Error(`Network request timed out.${hint}`);
+    }
+    throw e;
   }
-  return (await res.json()) as Fountain;
 }

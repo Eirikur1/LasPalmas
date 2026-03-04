@@ -59,8 +59,13 @@ export async function uploadFountainPhoto(localUri: string): Promise<string> {
 
 /**
  * Upload multiple images and return their public URLs in order.
+ * Uploads sequentially to avoid holding multiple large base64 buffers in memory
+ * simultaneously, which can crash the app on low-end devices.
  */
 export async function uploadFountainPhotos(localUris: string[]): Promise<string[]> {
-  const urls = await Promise.all(localUris.map((uri) => uploadFountainPhoto(uri)));
+  const urls: string[] = [];
+  for (const uri of localUris) {
+    urls.push(await uploadFountainPhoto(uri));
+  }
   return urls;
 }

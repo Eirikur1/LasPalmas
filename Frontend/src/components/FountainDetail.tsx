@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Animated,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +41,37 @@ const fountainRegion = (f: Fountain) => ({
   latitudeDelta: 0.005,
   longitudeDelta: 0.005,
 });
+
+function PhotoTile({ uri, width, marginRight }: { uri: string; width: number; marginRight: number }) {
+  const [loaded, setLoaded] = useState(false);
+  const pulse = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    if (loaded) return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [loaded, pulse]);
+
+  return (
+    <View style={[styles.carouselImage, { width, marginRight }]}>
+      {!loaded && (
+        <Animated.View style={[StyleSheet.absoluteFill, styles.skeleton, { opacity: pulse }]} />
+      )}
+      <Image
+        source={{ uri }}
+        style={[StyleSheet.absoluteFill, !loaded && { opacity: 0 }]}
+        resizeMode="cover"
+        onLoad={() => setLoaded(true)}
+      />
+    </View>
+  );
+}
 
 export default function FountainDetail({ fountain, onPhotosAdded }: FountainDetailProps) {
   const urls: string[] =
@@ -207,16 +239,13 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
                 }}
               >
                 {urls.map((uri, i) => (
-                  <Image
+                  <PhotoTile
                     key={`${uri}-${i}`}
-                    source={{ uri }}
+                    uri={uri}
+                    width={ITEM_W}
                     // Last image before add-photo still needs a gap; last image
                     // overall (no add-photo) has no trailing margin so content ends flush.
-                    style={[styles.carouselImage, {
-                      width: ITEM_W,
-                      marginRight: (i < urls.length - 1 || canAddPhotos) ? IMG_GAP : 0,
-                    }]}
-                    resizeMode="cover"
+                    marginRight={(i < urls.length - 1 || canAddPhotos) ? IMG_GAP : 0}
                   />
                 ))}
                 {canAddPhotos && (
@@ -386,6 +415,10 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 10,
     overflow: "hidden",
+  },
+  skeleton: {
+    backgroundColor: "#E0E0E0",
+    borderRadius: 10,
   },
   dotsRow: {
     flexDirection: "row",
