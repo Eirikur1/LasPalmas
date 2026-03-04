@@ -200,7 +200,7 @@ export default function AddWaterSource({
           disabled={uploading}
           accessibilityLabel="Add photos"
         >
-          <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
+          <Ionicons name="add-circle-outline" size={20} color="#3A9BDC" />
           <Text style={styles.uploadAreaText}>Add photos</Text>
         </Pressable>
       </View>
@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   emojiButtonSelected: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EBF5FB",
     borderWidth: 2,
-    borderColor: "#2563EB",
+    borderColor: "#3A9BDC",
   },
   emoji: { fontSize: 26 },
   uploadSection: { marginBottom: 24 },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#2563EB",
+    borderColor: "#3A9BDC",
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -336,10 +336,10 @@ const styles = StyleSheet.create({
   uploadAreaText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#2563EB",
+    color: "#3A9BDC",
   },
   submitButton: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#3A9BDC",
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
