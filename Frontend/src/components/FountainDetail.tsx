@@ -180,16 +180,6 @@ export default function FountainDetail({ fountain, onPhotosAdded }: FountainDeta
                   </Pressable>
                 )}
               </ScrollView>
-              {urls.length > 1 && (
-                <View style={styles.dotsRow}>
-                  {urls.map((_, i) => (
-                    <View
-                      key={i}
-                      style={[styles.dot, i === carouselIndex && styles.dotActive]}
-                    />
-                  ))}
-                </View>
-              )}
             </View>
           )}
           {(fountain.description ?? "").trim() ? (
