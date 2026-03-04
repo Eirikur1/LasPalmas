@@ -1,4 +1,3 @@
-import * as FileSystem from "expo-file-system";
 import * as ImageManipulator from "expo-image-manipulator";
 import { supabase } from "./supabase";
 
@@ -8,9 +7,8 @@ const BUCKET = "fountain-photos";
  * Upload a single image from a local URI (e.g. from expo-image-picker) to
  * Supabase Storage and return the public URL.
  *
- * Uses expo-image-manipulator to convert to JPEG (handles HEIC from iPhone),
- * then reads via expo-file-system as base64 to avoid the Expo Go bug where
- * fetch(localUri).blob() always returns an empty blob.
+ * Converts to JPEG with base64:true so we get raw bytes without needing
+ * expo-file-system, avoiding the Expo Go bug where fetch().blob() returns empty.
  */
 export async function uploadFountainPhoto(localUri: string): Promise<string> {
   if (!supabase) {
@@ -19,20 +17,20 @@ export async function uploadFountainPhoto(localUri: string): Promise<string> {
     );
   }
 
-  // Convert to JPEG — handles HEIC/HEIF and normalises other formats.
-  const manipulated = await ImageManipulator.manipulateAsync(
+  // Convert to JPEG and get base64 in one step — handles HEIC, PNG, etc.
+  const result = await ImageManipulator.manipulateAsync(
     localUri,
     [],
-    { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+    { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
   );
 
-  // Read file as base64 — reliable in Expo Go where fetch().blob() returns empty.
-  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  const base64Data = result.base64;
+  if (!base64Data) {
+    throw new Error("Failed to encode image as base64.");
+  }
 
   // Decode base64 to raw bytes for Supabase upload.
-  const binaryString = atob(base64);
+  const binaryString = atob(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
