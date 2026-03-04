@@ -60,7 +60,7 @@ app.post("/api/water-sources", async (req: Request, res: Response) => {
 
 app.patch("/api/water-sources/:id/images", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { images } = req.body as { images?: string[] };
     if (!Array.isArray(images) || images.length === 0) {
       res.status(400).json({ error: "images array required" });
