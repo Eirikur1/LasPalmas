@@ -38,15 +38,13 @@ export default function AddWaterSource({
   const [uploading, setUploading] = useState(false);
 
   const [permission, requestPermission] = ImagePicker.useMediaLibraryPermissions();
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
 
-  const pickImages = async () => {
+  const addFromLibrary = async () => {
     if (permission?.status !== "granted") {
       const { status } = await requestPermission();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Allow access to your photos to upload images for the water source."
-        );
+        Alert.alert("Permission needed", "Allow access to your photos to upload images.");
         return;
       }
     }
@@ -56,11 +54,33 @@ export default function AddWaterSource({
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.length) {
-      setSelectedUris((prev) => [
-        ...prev,
-        ...result.assets.map((a) => a.uri),
-      ]);
+      setSelectedUris((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
     }
+  };
+
+  const addFromCamera = async () => {
+    if (cameraPermission?.status !== "granted") {
+      const { status } = await requestCameraPermission();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Allow camera access to take photos.");
+        return;
+      }
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      setSelectedUris((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
+    }
+  };
+
+  const pickImages = () => {
+    Alert.alert("Add photo", undefined, [
+      { text: "Take photo", onPress: addFromCamera },
+      { text: "Choose from library", onPress: addFromLibrary },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const removeImage = (index: number) => {
@@ -198,17 +218,10 @@ export default function AddWaterSource({
           style={styles.uploadArea}
           onPress={pickImages}
           disabled={uploading}
-          accessibilityLabel="Choose file to upload"
+          accessibilityLabel="Add photos"
         >
-          <View style={styles.uploadIconWrap}>
-            <Ionicons name="cloud-upload-outline" size={40} color="#9CA3AF" />
-          </View>
-          <Text style={styles.uploadHint}>
-            Tap{" "}
-            <Text style={styles.uploadLink}>Choose file</Text>
-            {" "}to pick photos from your library
-          </Text>
-          <Text style={styles.uploadFormats}>png, jpeg</Text>
+          <Ionicons name="add-circle-outline" size={20} color="#3A9BDC" />
+          <Text style={styles.uploadAreaText}>Add photos</Text>
         </Pressable>
       </View>
 
@@ -299,9 +312,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   emojiButtonSelected: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EBF5FB",
     borderWidth: 2,
-    borderColor: "#2563EB",
+    borderColor: "#3A9BDC",
   },
   emoji: { fontSize: 26 },
   uploadSection: { marginBottom: 24 },
@@ -328,45 +341,25 @@ const styles = StyleSheet.create({
     right: 4,
   },
   uploadArea: {
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-    paddingVertical: 32,
-    paddingHorizontal: 20,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#3A9BDC",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginTop: 10,
   },
-  uploadIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  uploadHint: {
+  uploadAreaText: {
     fontSize: 14,
-    color: "#374151",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  uploadLink: {
-    color: "#2563EB",
-    textDecorationLine: "underline",
-    fontWeight: "500",
-  },
-  uploadFormats: {
-    fontSize: 12,
-    color: "#9CA3AF",
+    fontWeight: "600",
+    color: "#3A9BDC",
   },
   submitButton: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#3A9BDC",
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",

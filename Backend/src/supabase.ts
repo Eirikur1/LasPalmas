@@ -65,6 +65,28 @@ export interface InsertWaterSourceBody {
   rating?: number | null;
 }
 
+export async function addImagesToWaterSource(
+  id: string,
+  newImages: string[]
+): Promise<WaterSourceResponse | null> {
+  if (!supabase) return null;
+  const { data: existing } = await supabase
+    .from(TABLE)
+    .select("images")
+    .eq("id", id)
+    .single();
+  const existingImages: string[] = (existing as { images: string[] | null } | null)?.images ?? [];
+  const updatedImages = [...existingImages, ...newImages];
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update({ images: updatedImages })
+    .eq("id", id)
+    .select("id, name, latitude, longitude, images, rating, is_operational")
+    .single();
+  if (error) throw error;
+  return data ? toResponse(data as WaterSourceRow) : null;
+}
+
 export async function insertWaterSource(
   body: InsertWaterSourceBody
 ): Promise<WaterSourceResponse | null> {

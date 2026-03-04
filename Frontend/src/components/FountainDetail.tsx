@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,29 @@ import {
   Pressable,
   StyleSheet,
   Platform,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import type { Fountain } from "../types/fountain";
 import { darkMapStyle } from "../constants/mapStyles";
 import { openDirections } from "../utils/directions";
+import { uploadFountainPhotos } from "../lib/uploadFountainPhoto";
+import { addPhotosToWaterSource } from "../lib/waterSources";
+
+const SCREEN_W = Dimensions.get("window").width;
+// Account for mapBlock margins (8), padding (13), and belowMap margins (6)
+const CAROUSEL_W = SCREEN_W - 8 * 2 - 13 * 2 - 6 * 2;
+const IMG_GAP = 8;
+// Show 2.5 images at once so the third peeks, hinting there are more
+const ITEM_W = (CAROUSEL_W - IMG_GAP * 2) / 2.5;
 
 interface FountainDetailProps {
   fountain: Fountain;
+  onPhotosAdded?: (updated: Fountain) => void;
 }
 
 const RATING_EMOJIS = ["😖", "😕", "😐", "🙂", "😍"];
@@ -27,26 +41,100 @@ const fountainRegion = (f: Fountain) => ({
   longitudeDelta: 0.005,
 });
 
-export default function FountainDetail({ fountain }: FountainDetailProps) {
-  // Prefer API/OSM images when present; otherwise use local placeholders
+export default function FountainDetail({ fountain, onPhotosAdded }: FountainDetailProps) {
   const urls: string[] =
     (fountain.images?.length ?? 0) > 0
       ? fountain.images!
       : fountain.imageUrl
         ? [fountain.imageUrl]
         : [];
-  const img1 = urls[0];
-  const img2 = urls[1];
-  // Reset error state when fountain changes so a failed image on one location
-  // doesn't permanently hide images on all subsequent locations.
-  const [img1Error, setImg1Error] = useState(false);
-  const [img2Error, setImg2Error] = useState(false);
-  const prevFountainId = React.useRef(fountain.id);
+
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+
+  // Only user-uploaded fountains (UUID string IDs) support adding photos.
+  const canAddPhotos = typeof fountain.id === "string" && !!onPhotosAdded;
+
+  const totalSlides = urls.length + (canAddPhotos ? 1 : 0);
+
+  // The add-photo slide has marginRight = ITEM_W/2, so content ends
+  // ITEM_W/2 past its right edge. The final snap positions the last real
+  // photo ~IMG_GAP from the viewport left, with add-photo fully visible and
+  // a half-slot trailing gap — noticeably further than right-edge-only,
+  // but well short of snapping add-photo to the far left.
+  // finalSnap = (totalSlides-1)*(ITEM_W+IMG_GAP) + 1.5*ITEM_W - CAROUSEL_W
+  const snapOffsets = useMemo(() => {
+    if (totalSlides <= 1) return [0];
+    const finalSnap = Math.round(
+      (totalSlides - 1) * (ITEM_W + IMG_GAP) + 1.5 * ITEM_W - CAROUSEL_W
+    );
+    if (finalSnap <= 0) return [0]; // everything fits, no scroll needed
+    const offsets: number[] = [0];
+    for (let i = 1; i * (ITEM_W + IMG_GAP) < finalSnap; i++) {
+      offsets.push(Math.round(i * (ITEM_W + IMG_GAP)));
+    }
+    offsets.push(finalSnap);
+    return offsets;
+  }, [totalSlides]);
+
+  const prevFountainId = useRef(fountain.id);
   if (prevFountainId.current !== fountain.id) {
     prevFountainId.current = fountain.id;
-    if (img1Error) setImg1Error(false);
-    if (img2Error) setImg2Error(false);
+    setCarouselIndex(0);
   }
+
+  const uploadUris = useCallback(async (uris: string[]) => {
+    if (!uris.length) return;
+    setAddingPhoto(true);
+    try {
+      const newUrls = await uploadFountainPhotos(uris);
+      const updated = await addPhotosToWaterSource(String(fountain.id), newUrls);
+      if (updated) onPhotosAdded?.(updated);
+    } catch (e) {
+      Alert.alert("Upload failed", e instanceof Error ? e.message : "Could not add photos.");
+    } finally {
+      setAddingPhoto(false);
+    }
+  }, [fountain.id, onPhotosAdded]);
+
+  const addFromLibrary = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow access to your photos to add images.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      await uploadUris(result.assets.map((a) => a.uri));
+    }
+  }, [uploadUris]);
+
+  const addFromCamera = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow camera access to take photos.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.length) {
+      await uploadUris(result.assets.map((a) => a.uri));
+    }
+  }, [uploadUris]);
+
+  const handleAddPhoto = useCallback(() => {
+    Alert.alert("Add photo", undefined, [
+      { text: "Take photo", onPress: addFromCamera },
+      { text: "Choose from library", onPress: addFromLibrary },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [addFromCamera, addFromLibrary]);
 
   return (
     <ScrollView
@@ -101,28 +189,57 @@ export default function FountainDetail({ fountain }: FountainDetailProps) {
               )}
             </View>
           </View>
-          <View style={styles.imageRow}>
-            {img1 && !img1Error ? (
-              <Image
-                source={{ uri: img1 }}
-                style={styles.galleryImage}
-                resizeMode="cover"
-                onError={() => setImg1Error(true)}
-              />
-            ) : (
-              <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
-            )}
-            {img2 && !img2Error ? (
-              <Image
-                source={{ uri: img2 }}
-                style={styles.galleryImage}
-                resizeMode="cover"
-                onError={() => setImg2Error(true)}
-              />
-            ) : (
-              <View style={[styles.galleryImage, styles.galleryPlaceholder]} />
-            )}
-          </View>
+          {/* Image carousel — last tile is the add-photo button when allowed */}
+          {(urls.length > 0 || canAddPhotos) && (
+            <View style={styles.imageBlock}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToOffsets={snapOffsets}
+                decelerationRate="fast"
+                bounces={false}
+                style={{ width: CAROUSEL_W }}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(
+                    e.nativeEvent.contentOffset.x / (ITEM_W + IMG_GAP)
+                  );
+                  setCarouselIndex(idx);
+                }}
+              >
+                {urls.map((uri, i) => (
+                  <Image
+                    key={`${uri}-${i}`}
+                    source={{ uri }}
+                    // Last image before add-photo still needs a gap; last image
+                    // overall (no add-photo) has no trailing margin so content ends flush.
+                    style={[styles.carouselImage, {
+                      width: ITEM_W,
+                      marginRight: (i < urls.length - 1 || canAddPhotos) ? IMG_GAP : 0,
+                    }]}
+                    resizeMode="cover"
+                  />
+                ))}
+                {canAddPhotos && (
+                  <Pressable
+                    // marginRight = ITEM_W/2 extends content so max scroll == finalSnap.
+                    style={[styles.carouselImage, styles.addPhotoSlide, { width: ITEM_W, marginRight: Math.round(ITEM_W / 2) }]}
+                    onPress={handleAddPhoto}
+                    disabled={addingPhoto}
+                    accessibilityLabel="Add photo"
+                  >
+                    {addingPhoto ? (
+                      <ActivityIndicator color="#3A9BDC" />
+                    ) : (
+                      <>
+                        <Ionicons name="add" size={28} color="#3A9BDC" />
+                        <Text style={styles.addPhotoSlideText}>Add photo</Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
+              </ScrollView>
+            </View>
+          )}
           {(fountain.description ?? "").trim() ? (
             <Text style={styles.shortDescription} numberOfLines={3}>
               {fountain.description!.trim()}
@@ -261,14 +378,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: GAP_IMAGES,
   },
-  galleryImage: {
-    flex: 1,
-    height: 120,
-    borderRadius: 12,
+  imageBlock: {
+    marginBottom: 8,
+    gap: 6,
+  },
+  carouselImage: {
+    height: 140,
+    borderRadius: 10,
     overflow: "hidden",
   },
-  galleryPlaceholder: {
-    backgroundColor: "#E5E7EB",
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D1D5DB",
+  },
+  dotActive: {
+    backgroundColor: "#3A9BDC",
+  },
+  addPhotoSlide: {
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#3A9BDC",
+    backgroundColor: "#F0F8FE",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  addPhotoSlideText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#3A9BDC",
   },
   ratingSection: { marginBottom: 0 },
   ratingQuestion: {
@@ -321,7 +468,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#1a73e8",
+    backgroundColor: "#3A9BDC",
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,

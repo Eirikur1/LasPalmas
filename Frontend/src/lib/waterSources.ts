@@ -75,3 +75,22 @@ export async function insertWaterSource(
     throw e;
   }
 }
+
+/** Append new image URLs to an existing user-uploaded water source. */
+export async function addPhotosToWaterSource(
+  id: string,
+  images: string[]
+): Promise<Fountain | null> {
+  const base = getBaseUrl();
+  if (!base) throw new Error("Backend URL not set.");
+  const res = await fetch(`${base}/api/water-sources/${id}/images`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ images }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? "Failed to update images");
+  }
+  return (await res.json()) as Fountain;
+}
